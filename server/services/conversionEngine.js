@@ -1,6 +1,6 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("node:crypto");
 const { getVersionPreset } = require("../config/versions");
 const { UserFacingError } = require("../utils/errors");
 const { sanitizeBaseName, bytesToHumanReadable } = require("../utils/fileUtils");
@@ -116,7 +116,7 @@ async function convertProject({
   onProgress(80, "Compatibility risks analyzed");
 
   const safeBaseName = sanitizeBaseName(originalName);
-  const conversionId = jobId || uuidv4();
+  const conversionId = jobId || randomUUID();
   const outputFileName = `${safeBaseName}-downgraded-to-${targetYear}-${conversionId}.prproj`;
   const outputPath = path.join(outputDir, outputFileName);
 

@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("node:crypto");
 
 const RETAIN_JOB_LIMIT = 200;
 const JOB_TTL_MS = 1000 * 60 * 60 * 24;
@@ -9,7 +9,7 @@ class JobStore {
   }
 
   createJob(initialData = {}) {
-    const id = uuidv4();
+    const id = randomUUID();
     const now = new Date().toISOString();
 
     const job = {

@@ -4,3 +4,5 @@ storage/output/*
 !storage/uploads/.gitkeep
 !storage/output/.gitkeep
 npm-debug.log*
+
+.vercel
