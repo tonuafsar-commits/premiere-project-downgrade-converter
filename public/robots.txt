@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://premiere-project-downgrade-converte.vercel.app/sitemap.xml

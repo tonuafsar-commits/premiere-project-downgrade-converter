@@ -367,6 +367,34 @@ li {
   color: #24363c;
 }
 
+details {
+  border: 1px solid rgba(11, 95, 107, 0.18);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #193a43;
+}
+
+details p {
+  margin: 9px 0 2px;
+  color: #2f4b53;
+}
+
+.seo-content p {
+  color: #36535a;
+}
+
+.guide-link-wrap a {
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
 @keyframes shimmer {
   to {
     transform: translateX(100%);
