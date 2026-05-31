@@ -215,6 +215,22 @@ select {
   margin: 10px 0 0;
 }
 
+.latest-release-note {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(11, 95, 107, 0.2);
+  background: rgba(15, 122, 138, 0.06);
+  color: #24454e;
+  font-size: 0.85rem;
+}
+
+.latest-release-note.stale {
+  border-color: rgba(167, 106, 18, 0.35);
+  background: rgba(240, 141, 73, 0.11);
+  color: #63441d;
+}
+
 .progress-wrap {
   margin-top: 8px;
 }

@@ -3,6 +3,7 @@ const elements = {
   projectFileInput: document.getElementById("projectFileInput"),
   selectedFile: document.getElementById("selectedFile"),
   targetVersion: document.getElementById("targetVersion"),
+  latestReleaseText: document.getElementById("latestReleaseText"),
   convertButton: document.getElementById("convertButton"),
   progressBar: document.getElementById("progressBar"),
   progressText: document.getElementById("progressText"),
@@ -190,10 +191,38 @@ function startPolling(jobId) {
   }, 900);
 }
 
+function renderLatestReleaseInfo(latestStableRelease) {
+  if (!elements.latestReleaseText) {
+    return;
+  }
+
+  if (!latestStableRelease?.available) {
+    elements.latestReleaseText.textContent =
+      "Latest Adobe stable release: unavailable right now (using local compatibility mapping).";
+    elements.latestReleaseText.classList.add("stale");
+    return;
+  }
+
+  const version = latestStableRelease.latestVersion || "unknown";
+  const releaseHeading = latestStableRelease.releaseHeading
+    ? `${latestStableRelease.releaseHeading}`
+    : "recent release";
+
+  elements.latestReleaseText.textContent =
+    `Latest Adobe stable release: v${version} (${releaseHeading}).`;
+
+  if (latestStableRelease.stale) {
+    elements.latestReleaseText.classList.add("stale");
+  } else {
+    elements.latestReleaseText.classList.remove("stale");
+  }
+}
+
 async function loadTargetVersions() {
   const data = await fetchJson("/api/versions");
   state.versions = data.versions || [];
   elements.targetVersion.innerHTML = "";
+  renderLatestReleaseInfo(data.latestStableRelease);
 
   for (const version of state.versions) {
     const option = document.createElement("option");

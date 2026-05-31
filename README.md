@@ -7,6 +7,7 @@ Web-based Adobe Premiere Pro project downgrade tool focused on making newer `.pr
 - Uploads a `.prproj` file through a browser UI
 - Detects likely source project version metadata
 - Lets the user choose a target Premiere version (default: 2023)
+- Auto-checks Adobe official release notes and displays the latest stable Premiere version in UI
 - Applies guarded compatibility metadata rewrites
 - Preserves project structure and timeline metadata as much as possible
 - Generates:
@@ -115,6 +116,12 @@ http://localhost:5050
 - warnings
 - applied metadata changes
 - final status (`successful`, `partially_successful`, `failed`)
+
+## Auto Update Behavior
+
+- `GET /api/versions` now includes `latestStableRelease`, fetched from Adobe’s official Premiere release-notes page.
+- The fetch result is cached for 12 hours to reduce latency and rate pressure.
+- If Adobe is temporarily unreachable, the app falls back safely to cached data (or local mappings) and marks the release info as stale.
 
 ## Safety Features
 

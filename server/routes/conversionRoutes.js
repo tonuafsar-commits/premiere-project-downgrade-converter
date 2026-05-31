@@ -3,6 +3,7 @@ const multer = require("multer");
 const express = require("express");
 const { DEFAULT_TARGET_VERSION, listVersionPresets } = require("../config/versions");
 const { convertProject } = require("../services/conversionEngine");
+const { getLatestReleaseInfo } = require("../services/adobeReleaseTracker");
 const { UserFacingError } = require("../utils/errors");
 const { removeIfExists } = require("../utils/fileUtils");
 
@@ -32,10 +33,12 @@ function createConversionRouter({ jobStore, uploadsDir, outputDir }) {
     },
   });
 
-  router.get("/versions", (req, res) => {
+  router.get("/versions", async (req, res) => {
+    const latestStableRelease = await getLatestReleaseInfo();
     res.json({
       defaultTargetVersion: DEFAULT_TARGET_VERSION,
       versions: listVersionPresets(),
+      latestStableRelease,
     });
   });
 
