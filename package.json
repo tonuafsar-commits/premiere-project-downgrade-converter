@@ -1,0 +1,25 @@
+{
+  "name": "premiere-project-downgrade-converter",
+  "version": "1.0.0",
+  "description": "Web-based Adobe Premiere Pro project downgrade converter with safety reporting",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node -e \"console.log('No automated tests configured yet.')\""
+  },
+  "keywords": [
+    "premiere-pro",
+    "prproj",
+    "converter",
+    "downgrade"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "uuid": "^14.0.0"
+  }
+}
