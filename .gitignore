@@ -6,3 +6,4 @@ storage/output/*
 npm-debug.log*
 
 .vercel
+seo-weekly-report*.md

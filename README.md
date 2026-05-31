@@ -123,6 +123,20 @@ http://localhost:5050
 - The fetch result is cached for 12 hours to reduce latency and rate pressure.
 - If Adobe is temporarily unreachable, the app falls back safely to cached data (or local mappings) and marks the release info as stale.
 
+## Weekly SEO Automation
+
+- A scheduled GitHub Actions workflow is included at:
+  - `.github/workflows/weekly-seo-audit.yml`
+- It runs weekly and also supports manual trigger (`workflow_dispatch`).
+- It executes:
+  - `scripts/weekly-seo-audit.mjs`
+- The workflow:
+  - audits on-page SEO signals across sitemap URLs
+  - uploads a markdown SEO report artifact
+  - opens a weekly GitHub issue with recommendations
+
+This creates a recurring SEO improvement loop directly in the repository.
+
 ## Safety Features
 
 - strict file extension check

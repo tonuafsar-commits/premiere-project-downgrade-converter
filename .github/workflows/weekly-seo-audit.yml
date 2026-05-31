@@ -1,0 +1,48 @@
+name: Weekly SEO Audit
+
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  seo-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Run SEO audit
+        run: |
+          node scripts/weekly-seo-audit.mjs --base-url "https://premiere-project-downgrade-converte.vercel.app" --out seo-weekly-report.md
+
+      - name: Upload SEO report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-weekly-report-${{ github.run_id }}
+          path: seo-weekly-report.md
+          if-no-files-found: error
+
+      - name: Publish SEO audit issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const titleDate = new Date().toISOString().slice(0, 10);
+            const title = `Weekly SEO Audit - ${titleDate}`;
+            const body = fs.readFileSync('seo-weekly-report.md', 'utf8');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body
+            });

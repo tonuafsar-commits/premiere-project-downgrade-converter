@@ -87,6 +87,18 @@ h1 {
   color: var(--muted);
 }
 
+.hero-links {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 12px 0 0;
+}
+
+.hero-links a {
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
 .subtitle code {
   padding: 2px 5px;
   border-radius: 5px;
