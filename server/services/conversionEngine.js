@@ -1,6 +1,7 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const { randomUUID } = require("node:crypto");
+const { XMLValidator } = require("fast-xml-parser");
 const { getVersionPreset } = require("../config/versions");
 const { UserFacingError } = require("../utils/errors");
 const { sanitizeBaseName, bytesToHumanReadable } = require("../utils/fileUtils");
@@ -8,6 +9,7 @@ const { readPrprojFile, encodePrprojFile } = require("./prprojReader");
 const { detectSourceVersion } = require("./versionDetector");
 const { analyzeProjectStructure, detectCompatibilityRisks, getPreservationList } = require("./projectAnalyzer");
 const { applyMetadataDowngrade } = require("./metadataDowngrade");
+const { sanitizeProjectXml } = require("./xmlSanitizer");
 
 const MAX_UPLOAD_SIZE_BYTES = 200 * 1024 * 1024;
 
@@ -73,6 +75,25 @@ function dedupe(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function validateXmlOrThrow(xmlText, stageLabel) {
+  const validationResult = XMLValidator.validate(xmlText);
+  if (validationResult === true) {
+    return;
+  }
+
+  const error = validationResult?.err || {};
+  const location = Number.isFinite(error.line)
+    ? `line ${error.line}, column ${error.col || 1}`
+    : "unknown location";
+  const message = error.msg || "XML validation failed.";
+
+  throw new UserFacingError(
+    `${stageLabel} produced invalid project XML (${location}): ${message}`,
+    "INVALID_XML_AFTER_CONVERSION",
+    422,
+  );
+}
+
 async function convertProject({
   jobId,
   uploadPath,
@@ -97,21 +118,32 @@ async function convertProject({
   const sourcePayload = await readPrprojFile(uploadPath);
   onProgress(26, "Project file decoded");
 
-  const sourceVersion = detectSourceVersion(sourcePayload.xmlText);
+  const sourceSanitization = sanitizeProjectXml(sourcePayload.xmlText);
+  validateXmlOrThrow(sourceSanitization.xmlText, "Input sanitization");
+
+  const sourceVersion = detectSourceVersion(sourceSanitization.xmlText);
   onProgress(38, "Source version detected");
 
-  const structureMetrics = analyzeProjectStructure(sourcePayload.xmlText);
+  const structureMetrics = analyzeProjectStructure(sourceSanitization.xmlText);
   onProgress(50, "Project structure analyzed");
 
   const rewriteResult = applyMetadataDowngrade(
-    sourcePayload.xmlText,
+    sourceSanitization.xmlText,
     sourceVersion,
     targetPreset,
   );
   onProgress(68, "Compatibility metadata adjusted");
 
-  const riskResult = detectCompatibilityRisks(rewriteResult.xmlText, targetYear);
-  const warnings = dedupe([...rewriteResult.warnings, ...riskResult.warnings]);
+  const outputSanitization = sanitizeProjectXml(rewriteResult.xmlText);
+  validateXmlOrThrow(outputSanitization.xmlText, "Conversion");
+
+  const riskResult = detectCompatibilityRisks(outputSanitization.xmlText, targetYear);
+  const warnings = dedupe([
+    ...sourceSanitization.notes,
+    ...outputSanitization.notes,
+    ...rewriteResult.warnings,
+    ...riskResult.warnings,
+  ]);
   const unsupportedItems = dedupe(riskResult.unsupportedItems);
   onProgress(80, "Compatibility risks analyzed");
 
@@ -120,7 +152,11 @@ async function convertProject({
   const outputFileName = `${safeBaseName}-downgraded-to-${targetYear}-${conversionId}.prproj`;
   const outputPath = path.join(outputDir, outputFileName);
 
-  const encodedProject = encodePrprojFile(rewriteResult.xmlText, sourcePayload.compression);
+  const encodedProject = encodePrprojFile(
+    outputSanitization.xmlText,
+    sourcePayload.compression,
+    sourcePayload.encodingMeta,
+  );
   await fs.writeFile(outputPath, encodedProject);
   onProgress(90, "Converted project generated");
 
@@ -147,6 +183,10 @@ async function convertProject({
     unsupportedItems,
     warnings,
     appliedChanges: rewriteResult.changes,
+    sanitizationNotes: dedupe([
+      ...sourceSanitization.notes,
+      ...outputSanitization.notes,
+    ]),
     strategy: rewriteResult.strategy,
     fallbackGuidance: unsupportedItems.length
       ? "If the downgraded project behaves unexpectedly, export/import sequence XML from a matching Premiere version and relink media."

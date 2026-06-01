@@ -1,17 +1,35 @@
-function parseMajor(versionString) {
-  if (!versionString) {
-    return null;
-  }
-  const match = String(versionString).match(/^(\d+)/);
-  return match ? Number(match[1]) : null;
+const PROJECT_CLASS_ID = "62ad66dd-0dcd-42da-a660-6d8fbde94876";
+const UNIVERSAL_COMPAT_VERSION = 1;
+
+function rewriteProjectObjectVersion(xmlText, targetVersion) {
+  const preferredRegex = new RegExp(
+    `(<Project\\b[^>]*\\bClassID="${PROJECT_CLASS_ID}"[^>]*\\bVersion=")(\\d+)(")`,
+    "i",
+  );
+  const fallbackRegex = /(<Project\b[^>]*\bVersion=")(\d+)(")/i;
+
+  const activeRegex = preferredRegex.test(xmlText) ? preferredRegex : fallbackRegex;
+  let didRewrite = false;
+  let previousVersion = null;
+
+  const rewritten = xmlText.replace(
+    activeRegex,
+    (fullMatch, prefix, versionNumber, suffix) => {
+      didRewrite = true;
+      previousVersion = versionNumber;
+      return `${prefix}${targetVersion}${suffix}`;
+    },
+  );
+
+  return {
+    xmlText: rewritten,
+    didRewrite,
+    previousVersion,
+  };
 }
 
 function applyMetadataDowngrade(xmlText, sourceVersionInfo, targetPreset) {
-  const headerLimit = Math.min(xmlText.length, 50000);
-  const header = xmlText.slice(0, headerLimit);
-  const remainder = xmlText.slice(headerLimit);
-
-  let rewrittenHeader = header;
+  let rewrittenXml = xmlText;
   const changes = [];
   const warnings = [];
 
@@ -19,52 +37,23 @@ function applyMetadataDowngrade(xmlText, sourceVersionInfo, targetPreset) {
   const targetProjectVersion = targetPreset.projectObjectVersion;
 
   if (
-    Number.isFinite(sourceProjectVersion) &&
-    Number.isFinite(targetProjectVersion) &&
-    sourceProjectVersion > targetProjectVersion
+    Number.isFinite(sourceProjectVersion) && sourceProjectVersion > targetProjectVersion
   ) {
-    const preferredRegex =
-      /(<Project\b[^>]*\bClassID="62ad66dd-0dcd-42da-a660-6d8fbde94876"[^>]*\bVersion=")(\d+)(")/i;
-    const fallbackRegex = /(<Project\b[^>]*\bVersion=")(\d+)(")/i;
-    const activeRegex = preferredRegex.test(rewrittenHeader)
-      ? preferredRegex
-      : fallbackRegex;
-
-    rewrittenHeader = rewrittenHeader.replace(
-      activeRegex,
-      (fullMatch, prefix, versionNumber, suffix) => {
-        changes.push(
-          `Project object version ${versionNumber} -> ${targetProjectVersion}`,
-        );
-        return `${prefix}${targetProjectVersion}${suffix}`;
-      },
+    // Setting to universal compatibility version is more resilient than trying
+    // to rewrite many independent metadata fields.
+    const rewrite = rewriteProjectObjectVersion(
+      rewrittenXml,
+      UNIVERSAL_COMPAT_VERSION,
     );
-  }
-
-  const sourceAppMajor = Number(sourceVersionInfo.appMajor);
-  const targetAppMajor = Number(targetPreset.appMajor);
-  const shouldDowngradeAppVersion =
-    Number.isFinite(sourceAppMajor) &&
-    Number.isFinite(targetAppMajor) &&
-    sourceAppMajor > targetAppMajor;
-
-  if (shouldDowngradeAppVersion) {
-    const appVersionRegex =
-      /(\b(?:AppVersion|ApplicationVersion|CreatorVersion|BuildVersion|ProductVersion)\s*=\s*")(\d+\.\d+(?:\.\d+)*)(")/gi;
-
-    rewrittenHeader = rewrittenHeader.replace(
-      appVersionRegex,
-      (fullMatch, prefix, versionNumber, suffix) => {
-        const major = parseMajor(versionNumber);
-        if (!Number.isFinite(major) || major <= targetAppMajor) {
-          return fullMatch;
-        }
-        changes.push(
-          `Application metadata ${versionNumber} -> ${targetPreset.appVersionString}`,
-        );
-        return `${prefix}${targetPreset.appVersionString}${suffix}`;
-      },
-    );
+    rewrittenXml = rewrite.xmlText;
+    if (rewrite.didRewrite) {
+      changes.push(
+        `Project object version ${rewrite.previousVersion} -> ${UNIVERSAL_COMPAT_VERSION}`,
+      );
+      warnings.push(
+        `Applied universal compatibility project version flag for safer downgrade to ${targetPreset.label}.`,
+      );
+    }
   }
 
   if (!changes.length) {
@@ -80,10 +69,12 @@ function applyMetadataDowngrade(xmlText, sourceVersionInfo, targetPreset) {
   }
 
   return {
-    xmlText: rewrittenHeader + remainder,
+    xmlText: rewrittenXml,
     changes,
     warnings,
-    strategy: changes.length ? "direct-metadata-downgrade" : "safe-pass-through",
+    strategy: changes.length
+      ? "universal-version-flag-downgrade"
+      : "safe-pass-through",
   };
 }
 

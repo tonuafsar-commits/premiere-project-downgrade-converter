@@ -142,9 +142,12 @@ This creates a recurring SEO improvement loop directly in the repository.
 - strict file extension check
 - upload size limit
 - readable XML validation
+- XML well-formed validation before output generation
+- malformed nameless-tag cleanup for known damaged-project patterns
 - protection against likely binary/corrupted input
 - converted file written as a new copy only
 - explicit warnings when uncertain
+- encoding-preserving read/write (UTF-8/UTF-16 and gzip/plain handling)
 
 ## Updating for Future Premiere Versions
 
